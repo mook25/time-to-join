@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>정확한 시간 기준 예약 접속</title>
+  <title>정확한 시간 기준 예약 접속 (초단위)</title>
   <style>
     body {
       font-family: sans-serif;
@@ -32,7 +32,7 @@
   </style>
 </head>
 <body>
-  <h2>정확한 서버 시간 기준 예약 링크 자동 접속_오늘최종</h2>
+  <h2>정확한 서버 시간 기준 예약 링크 자동 접속 (초단위 설정)</h2>
 
   <div id="clock">서버 기준 시각: --:--:--</div>
 
@@ -40,8 +40,8 @@
     <input type="text" id="url" placeholder="https://example.com" />
   </label><br>
 
-  <label>예약 시간 (HH:MM):
-    <input type="time" id="time" />
+  <label>예약 시간 (HH:MM:SS):
+    <input type="text" id="time" placeholder="예: 14:05:30" />
   </label><br><br>
 
   <button onclick="schedule()">예약</button>
@@ -59,8 +59,7 @@
         const t2 = new Date().getTime();
         const data = await res.json();
         const serverTime = new Date(data.datetime).getTime();
-        // 평균 지연 보정 + 수동 보정값 (7초)
-        offset = serverTime - (t1 + t2) / 2 + 7000;
+        offset = serverTime - (t1 + t2) / 2 + 7000; // 7초 보정
         console.log("서버 offset (ms):", offset);
       } catch (e) {
         console.warn("서버 시간 동기화 실패. 브라우저 시간 기준 사용");
@@ -81,7 +80,7 @@
 
     function schedule() {
       const url = document.getElementById('url').value.trim();
-      const time = document.getElementById('time').value;
+      const time = document.getElementById('time').value.trim();
       const status = document.getElementById('status');
 
       if (!url || !time) {
@@ -91,8 +90,16 @@
       }
 
       const now = new Date(new Date().getTime() + offset);
-      const [hh, mm] = time.split(":").map(Number);
-      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+
+      const timeParts = time.split(":").map(Number);
+      if (timeParts.length < 2 || timeParts.length > 3) {
+        status.innerText = "⚠️ 예약 시간은 HH:MM 또는 HH:MM:SS 형식으로 입력해주세요.";
+        status.style.color = "red";
+        return;
+      }
+
+      const [hh, mm, ss = 0] = timeParts;
+      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, ss, 0);
 
       const delay = target - now;
       if (delay <= 0) {
@@ -114,13 +121,10 @@
           clearInterval(countdownTimer);
           status.innerText = "✅ 접속 중...";
           status.style.color = "blue";
-
-          // 팝업 차단 방지를 위한 window.open()
           const newWin = window.open(url, "_blank");
           if (!newWin) {
-            alert("❌ 팝업이 차단되었습니다. 팝업 차단을 해제해주세요.");
+            alert("❌ 팝업이 차단되었습니다. 팝업 허용을 설정해주세요.");
           }
-
           return;
         }
 
@@ -129,7 +133,6 @@
       }, 1000);
     }
 
-    // 시작 시 서버 offset 계산 후 시계 시작
     initTimeOffset();
   </script>
 </body>
