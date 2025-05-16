@@ -59,7 +59,7 @@
         const t2 = new Date().getTime();
         const data = await res.json();
         const serverTime = new Date(data.datetime).getTime();
-        offset = serverTime - (t1 + t2) / 2; // 왕복 지연 평균 보정
+        offset = serverTime - (t1 + t2) / 2 + 7000; // 7초 보정 추가
         console.log("시간 오차(ms):", offset);
       } catch (e) {
         console.warn("서버 시간 동기화 실패. 브라우저 시간 기준 사용");
