@@ -1,37 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>로컬 시간 기준 예약 접속</title>
+  <meta charset="UTF-8" />
+  <title>정확한 시간 기준 예약 접속</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #status { margin-top: 20px; font-weight: bold; color: green; }
-    #clock { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: navy; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    #clock {
+      font-size: 20px;
+      font-weight: bold;
+      color: navy;
+      margin-bottom: 20px;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: green;
+    }
+    input {
+      padding: 6px;
+      margin: 4px 0;
+      width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <h2>예약된 시간에 링크 자동 접속 (브라우저 시간 기준)</h2>
+  <h2>정확한 서버 시간 기준 예약 링크 자동 접속</h2>
 
-  <div id="clock">현재 시각: --:--:--</div>
+  <div id="clock">서버 기준 시각: --:--:--</div>
 
-  <label>URL: <input type="text" id="url" placeholder="https://example.com" style="width:300px;"></label><br><br>
-  <label>시간: <input type="time" id="time"></label><br><br>
+  <label>URL:
+    <input type="text" id="url" placeholder="https://example.com" />
+  </label><br>
+
+  <label>예약 시간 (HH:MM):
+    <input type="time" id="time" />
+  </label><br><br>
+
   <button onclick="schedule()">예약</button>
 
   <div id="status"></div>
 
   <script>
-    let interval = null;
+    let offset = 0;
+    let countdownTimer = null;
 
-    // 🔁 현재 시각 실시간 표시
+    async function initTimeOffset() {
+      try {
+        const res = await fetch("https://worldtimeapi.org/api/timezone/Asia/Seoul");
+        const data = await res.json();
+        const serverTime = new Date(data.datetime).getTime();
+        const browserTime = new Date().getTime();
+        offset = serverTime - browserTime;
+        console.log("시간 오차(ms):", offset);
+      } catch (e) {
+        console.warn("서버 시간 동기화 실패. 브라우저 시간 기준 사용");
+        offset = 0;
+      }
+    }
+
     function updateClock() {
-      const now = new Date();
+      const now = new Date(new Date().getTime() + offset);
       const hh = String(now.getHours()).padStart(2, '0');
       const mm = String(now.getMinutes()).padStart(2, '0');
       const ss = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('clock').innerText = `현재 시각: ${hh}:${mm}:${ss}`;
+      document.getElementById("clock").innerText = `서버 기준 시각: ${hh}:${mm}:${ss}`;
     }
+
     setInterval(updateClock, 1000);
-    updateClock(); // 첫 로딩 시 즉시 표시
+    initTimeOffset();
 
     function schedule() {
       const url = document.getElementById('url').value;
@@ -44,7 +88,7 @@
         return;
       }
 
-      const now = new Date();
+      const now = new Date(new Date().getTime() + offset);
       const [hh, mm] = time.split(":").map(Number);
       const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
 
@@ -55,21 +99,18 @@
         return;
       }
 
+      status.innerText = `⏳ 예약됨: ${Math.floor(delay / 1000)}초 후 접속 예정`;
+      status.style.color = "green";
+
+      if (countdownTimer) clearInterval(countdownTimer);
       const endTime = new Date(now.getTime() + delay);
-      startCountdown(endTime, url);
-      alert("예약 완료!");
-    }
 
-    function startCountdown(endTime, url) {
-      const status = document.getElementById('status');
-      clearInterval(interval);
-
-      interval = setInterval(() => {
-        const now = new Date();
-        const remain = endTime - now;
+      countdownTimer = setInterval(() => {
+        const now2 = new Date(new Date().getTime() + offset);
+        const remain = endTime - now2;
 
         if (remain <= 0) {
-          clearInterval(interval);
+          clearInterval(countdownTimer);
           status.innerText = "✅ 접속 중...";
           status.style.color = "blue";
           window.open(url, "_blank");
@@ -78,7 +119,6 @@
 
         const sec = Math.floor(remain / 1000);
         status.innerText = `⏳ 예약됨: ${sec}초 남음`;
-        status.style.color = "green";
       }, 1000);
     }
   </script>
