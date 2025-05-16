@@ -5,17 +5,33 @@
   <style>
     body { font-family: sans-serif; padding: 20px; }
     #status { margin-top: 20px; font-weight: bold; color: green; }
+    #clock { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: navy; }
   </style>
 </head>
 <body>
   <h2>예약된 시간에 링크 자동 접속 (브라우저 시간 기준)</h2>
+
+  <div id="clock">현재 시각: --:--:--</div>
+
   <label>URL: <input type="text" id="url" placeholder="https://example.com" style="width:300px;"></label><br><br>
   <label>시간: <input type="time" id="time"></label><br><br>
   <button onclick="schedule()">예약</button>
+
   <div id="status"></div>
 
   <script>
     let interval = null;
+
+    // 🔁 현재 시각 실시간 표시
+    function updateClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').innerText = `현재 시각: ${hh}:${mm}:${ss}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); // 첫 로딩 시 즉시 표시
 
     function schedule() {
       const url = document.getElementById('url').value;
@@ -47,6 +63,7 @@
     function startCountdown(endTime, url) {
       const status = document.getElementById('status');
       clearInterval(interval);
+
       interval = setInterval(() => {
         const now = new Date();
         const remain = endTime - now;
