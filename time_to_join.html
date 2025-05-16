@@ -2,38 +2,89 @@
 <html>
 <head>
   <title>정확한 시간 기준 예약 접속</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
 </head>
 <body>
-  <h2>서버 기준 시간으로 예약된 링크 열기</h2>
-  <label>URL: <input type="text" id="url" placeholder="https://example.com"></label><br><br>
+  <h2>정확한 시간 기준으로 예약된 링크 열기</h2>
+  <label>URL: <input type="text" id="url" placeholder="https://example.com" style="width: 300px;"></label><br><br>
   <label>시간: <input type="time" id="time"></label><br><br>
   <button onclick="schedule()">예약</button>
 
+  <div id="status"></div>
+
   <script>
+    let interval = null;
+
     async function schedule() {
       const url = document.getElementById('url').value;
       const time = document.getElementById('time').value;
-      if (!url || !time) return alert("URL과 시간을 모두 입력하세요");
+      const status = document.getElementById('status');
 
-      // 서버 시간 가져오기
-      const res = await fetch("https://worldtimeapi.org/api/timezone/Asia/Seoul");
-      const data = await res.json();
-      const serverNow = new Date(data.datetime);
-
-      const [hh, mm] = time.split(":").map(Number);
-      const target = new Date(serverNow.getFullYear(), serverNow.getMonth(), serverNow.getDate(), hh, mm, 0, 0);
-
-      const delay = target - serverNow;
-
-      if (delay <= 0) {
-        alert("미래 시간을 선택하세요");
+      if (!url || !time) {
+        status.innerText = "⚠️ URL과 시간을 모두 입력하세요.";
+        status.style.color = "red";
         return;
       }
 
-      alert(`예약 완료! ${Math.floor(delay / 1000)}초 후에 접속합니다.`);
-      setTimeout(() => {
-        window.open(url, "_blank");
-      }, delay);
+      status.innerText = "서버 시간 동기화 중...";
+      status.style.color = "black";
+
+      try {
+        const res = await fetch("https://worldtimeapi.org/api/timezone/Asia/Seoul");
+        const data = await res.json();
+        const serverNow = new Date(data.datetime);
+
+        const [hh, mm] = time.split(":").map(Number);
+        const target = new Date(serverNow.getFullYear(), serverNow.getMonth(), serverNow.getDate(), hh, mm, 0, 0);
+        const delay = target - serverNow;
+
+        if (delay <= 0) {
+          status.innerText = "⚠️ 미래 시간을 선택하세요.";
+          status.style.color = "red";
+          return;
+        }
+
+        const endTime = new Date(serverNow.getTime() + delay);
+        updateCountdown(endTime, url);
+
+        alert("예약 완료!");
+      } catch (e) {
+        status.innerText = "❌ 서버 시간 동기화 실패. 다시 시도해주세요.";
+        status.style.color = "red";
+        console.error(e);
+      }
+    }
+
+    function updateCountdown(endTime, url) {
+      const status = document.getElementById('status');
+      clearInterval(interval);
+
+      interval = setInterval(() => {
+        const now = new Date();
+        const remaining = endTime - now;
+
+        if (remaining <= 0) {
+          clearInterval(interval);
+          status.innerText = "✅ 접속 중...";
+          status.style.color = "blue";
+          window.open(url, "_blank");
+          return;
+        }
+
+        const sec = Math.floor(remaining / 1000);
+        status.innerText = `⏳ 예약됨: ${sec}초 남음`;
+        status.style.color = "green";
+      }, 1000);
     }
   </script>
 </body>
