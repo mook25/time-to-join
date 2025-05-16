@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>정확한 시간 기준 예약 접속</title>
+  <title>정확한 시간 기준 예약 접속_7</title>
   <style>
     body {
       font-family: sans-serif;
@@ -54,16 +54,21 @@
 
     async function initTimeOffset() {
       try {
+        const t1 = new Date().getTime();
         const res = await fetch("https://worldtimeapi.org/api/timezone/Asia/Seoul");
+        const t2 = new Date().getTime();
         const data = await res.json();
         const serverTime = new Date(data.datetime).getTime();
-        const browserTime = new Date().getTime();
-        offset = serverTime - browserTime;
+        offset = serverTime - (t1 + t2) / 2; // 왕복 지연 평균 보정
         console.log("시간 오차(ms):", offset);
       } catch (e) {
         console.warn("서버 시간 동기화 실패. 브라우저 시간 기준 사용");
         offset = 0;
       }
+
+      // offset 계산 완료 후 시계 시작
+      updateClock(); // 초기값 즉시 표시
+      setInterval(updateClock, 1000);
     }
 
     function updateClock() {
@@ -73,9 +78,6 @@
       const ss = String(now.getSeconds()).padStart(2, '0');
       document.getElementById("clock").innerText = `서버 기준 시각: ${hh}:${mm}:${ss}`;
     }
-
-    setInterval(updateClock, 1000);
-    initTimeOffset();
 
     function schedule() {
       const url = document.getElementById('url').value;
@@ -121,6 +123,9 @@
         status.innerText = `⏳ 예약됨: ${sec}초 남음`;
       }, 1000);
     }
+
+    // 페이지 로드시 정확한 서버 시간 offset 계산
+    initTimeOffset();
   </script>
 </body>
 </html>
